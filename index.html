@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <!-- viewport-fit=cover dipertahankan, ditambah pencegah zoom -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description" content="KOIN MWCNU Palimanan" />
+  <meta name="theme-color" content="#2E7D32" />
+  
+  <title>KOIN_MWCNU_PALIMANAN</title>
+  
+  <link rel="icon" type="image/png" href="https://i.imgur.com/8czPrjR.png" />
+  <link rel="apple-touch-icon" href="https://i.imgur.com/8czPrjR.png" />
+  
+  <!-- Manifest link yang akan diinjeksi via JavaScript agar start_url-nya akurat -->
+  <link rel="manifest" id="manifest-link" href="" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #f8f9fa;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Menggunakan teknik inset milik Anda yang sangat stabil */
+    .iframe-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100dvh; /* Menggunakan dvh dengan fallback ke % */
+      background: #fff;
+      z-index: 0;
+    }
+
+    @supports not (height: 100dvh) {
+      .iframe-container {
+        height: 100%;
+      }
+    }
+
+    /* Tampilan Loading */
+    .loader-container {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: #ffffff;
+      z-index: 1; 
+    }
+
+    .spinner {
+      width: 45px;
+      height: 45px;
+      border: 5px solid #e0e0e0;
+      border-top-color: #2E7D32;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-text {
+      margin-top: 15px;
+      color: #555;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Styling Iframe dengan transisi */
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: transparent;
+      z-index: 2;
+      position: relative;
+      opacity: 0; /* Sembunyikan sampai loading selesai */
+      transition: opacity 0.6s ease-in-out;
+    }
+
+    iframe.loaded {
+      opacity: 1;
+    }
+
+    /* Styling Tombol Install PWA */
+    .install-btn {
+      position: fixed;
+      top: 50%; /* Diubah untuk posisi tengah vertikal */
+      right: 20px; /* Tetap di sebelah kanan */
+      transform: translateY(-50%); /* Menyelaraskan tepat di tengah berdasarkan ukuran tombol */
+      background-color: #2E7D32;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      z-index: 9999;
+      display: none; /* Disembunyikan sampai browser mengonfirmasi bisa diinstall */
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .install-btn:active {
+      transform: translateY(-50%) scale(0.95); /* Menyesuaikan efek tekan dengan posisi Y */
+    }
+
+    /* Styling Modal Panduan Install Manual */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 10000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 24px;
+      border-radius: 16px;
+      width: 85%;
+      max-width: 320px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.show .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-title {
+      color: #2E7D32;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .modal-step {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .modal-step span {
+      background: #e8f5e9;
+      color: #2E7D32;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .modal-close-btn {
+      width: 100%;
+      background: #2E7D32;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="iframe-container">
+    
+    <!-- Animasi Loading -->
+    <div class="loader-container">
+      <div class="spinner"></div>
+      <div class="loading-text">Memuat Sistem...</div>
+    </div>
+
+    <!-- Iframe Aplikasi -->
+    <iframe
+      id="app"
+      title="Aplikasi Sistem Bank Pesantren"
+      src="https://script.google.com/macros/s/AKfycbxjopdHugX2vLr8wybcfmsQDPdgxAAVw2GEA_S1E9EsmHPpQ5XFLe0oXJFw2_OPqhfDsA/exec"
+      loading="lazy"
+      referrerpolicy="no-referrer"
+      allowfullscreen
+      allow="fullscreen; camera; microphone; geolocation; display-capture"
+      onload="document.getElementById('app').classList.add('loaded');"
+    >
+    </iframe>
+  </div>
+
+  <!-- Tombol Install -->
+  <button id="installBtn" class="install-btn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+    <span id="installText">Install</span>
+  </button>
+
+  <!-- Modal Instruksi Manual -->
+  <div id="manualModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-title">Cara Install Aplikasi</div>
+      <div class="modal-step">
+        <span>1</span>
+        <p>Ketuk ikon menu browser (titik tiga ⋮ di pojok kanan atas, atau tombol Share pada iPhone).</p>
+      </div>
+      <div class="modal-step">
+        <span>2</span>
+        <p>Pilih menu <b>"Tambahkan ke Layar Utama"</b> atau <b>"Add to Home Screen"</b>.</p>
+      </div>
+      <button class="modal-close-btn" onclick="closeModal()">Mengerti</button>
+    </div>
+  </div>
+
+  <!-- Script untuk PWA, Manifest Dinamis, & Fallback Tombol Install -->
+  <script>
+    // 1. Membuat file Manifest.json Dinamis agar start_url selalu cocok dengan URL hosting
+    const manifestData = {
+      name: "Bank Pesantren",
+      short_name: "Bank",
+      start_url: window.location.href.split('?')[0],
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: "#2E7D32",
+      icons: [
+        { src: "https://i.imgur.com/8czPrjR.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: "https://i.imgur.com/8czPrjR.png", sizes: "512x512", type: "image/png" }
+      ]
+    };
+    
+    const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/manifest+json' });
+    document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(manifestBlob));
+
+    // 2. Logika Tombol Install
+    let deferredPrompt;
+    let isPwaReady = false;
+    let hideBtnTimeout; // Variabel untuk menyimpan timer
+    const installBtn = document.getElementById('installBtn');
+    const manualModal = document.getElementById('manualModal');
+
+    // Fungsi untuk menampilkan tombol sementara lalu menyembunyikannya setelah 1 menit (60000 ms)
+    function showInstallBtnTemporarily() {
+      installBtn.style.display = 'flex';
+      clearTimeout(hideBtnTimeout);
+      hideBtnTimeout = setTimeout(() => {
+        installBtn.style.display = 'none';
+      }, 30000); // 30.000 ms = 30 detik
+    }
+
+    // Menangkap event install bawaan Chrome/Android
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      isPwaReady = true;
+      showInstallBtnTemporarily(); // Tampilkan dengan timer
+    });
+
+    // Menjalankan aksi klik pada tombol
+    installBtn.addEventListener('click', async () => {
+      if (isPwaReady && deferredPrompt) {
+        // Jika browser mendukung PWA otomatis
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          installBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+      } else {
+        // FALLBACK: Jika browser tidak mendukung (contoh: Safari iOS, atau belum di HTTPS)
+        manualModal.style.display = 'flex';
+        setTimeout(() => manualModal.classList.add('show'), 10);
+      }
+    });
+
+    // Memaksa tombol Install muncul setelah 10 detik, berfungsi sebagai panduan manual
+    setTimeout(() => {
+      if (installBtn.style.display !== 'flex') {
+        showInstallBtnTemporarily(); // Tampilkan dengan timer
+      }
+    }, 10000);
+
+    // Menyembunyikan tombol secara permanen jika sudah terinstall
+    window.addEventListener('appinstalled', () => {
+      installBtn.style.display = 'none';
+      clearTimeout(hideBtnTimeout);
+    });
+
+    // Fungsi tutup modal
+    function closeModal() {
+      manualModal.classList.remove('show');
+      setTimeout(() => manualModal.style.display = 'none', 300);
+    }
+  </script>
+</body>
+</html>
